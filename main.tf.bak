@@ -1,0 +1,134 @@
+provider "aws" {
+  region = "${var.aws_region}"
+}
+
+
+resource "aws_key_pair" "auth" {
+  key_name   = "${var.key_name}"
+  public_key = "${file(var.public_key_path)}"
+}
+
+
+# Create a subnet to launch our instances into
+resource "aws_subnet" "default" {
+  vpc_id                  = "vpc-efa07f88"
+  cidr_block              = "${var.cidr_block}"
+  map_public_ip_on_launch = true
+}
+
+# Our default security group to access
+# the instances over SSH and HTTP
+resource "aws_security_group" "default" {
+  name        = "${var.customer_name}"
+  description = "${var.customer_name}"
+  vpc_id      = "vpc-efa07f88"
+
+  
+
+  ingress {
+    from_port   = 9000
+    to_port     = 9000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # outbound internet access
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
+resource "aws_instance" "Wideorbit-DB" {
+iam_instance_profile = "WOCLOUD-MGMT"  
+count = "${var.instance_count}"
+connection {
+    # The default username for our AMI
+    user = "wideorbit"
+
+  }
+
+ tags {
+    Name = "${var.customer_name}${count.index}"
+  }
+
+  instance_type = "${var.dbinstance_type}"
+  ami = "ami-5648ad2c"
+
+root_block_device {
+volume_type = "gp2"
+volume_size = "60"
+delete_on_termination = "true"
+}
+  ebs_block_device {
+    device_name = "/dev/xvdb"
+    volume_type = "gp2"
+    volume_size = 200
+  }
+
+
+}
+resource "aws_eip" "Wideorbit-DBEIP" {
+  count = "${var.instance_count}"
+  instance = "${element(aws_instance.Wideorbit-DB.*.id, count.index)}"
+}
+resource "aws_eip" "Wideorbit-AppEIP" {
+  count = "${var.instance_count2}"
+  instance = "${element(aws_instance.Wideorbit-App.*.id, count.index)}"
+}
+
+
+#App servers
+resource "aws_instance" "Wideorbit-App" {
+
+iam_instance_profile = "WOCLOUD-MGMT"
+count = "${var.instance_count2}"
+connection {
+    # The default username for our AMI
+    user = "wideorbit"
+
+  }
+
+ tags {
+    Name = "${var.customer_name}${count.index}"
+  }
+
+  instance_type = "${var.appinstance_type}"
+  ami = "ami-5648ad2c"
+
+root_block_device {
+volume_type = "gp2"
+volume_size = "60"
+delete_on_termination = "true"
+}
+
+  ebs_block_device {
+    device_name = "/dev/xvdb"
+    volume_type = "gp2"
+    volume_size = 50
+  }
+
+
+  # The name of our keypair we created above.
+  key_name = "${aws_key_pair.auth.id}"
+
+  # Our Security groups 
+  vpc_security_group_ids = ["${aws_security_group.default.id}","sg-98ee0ee2","sg-f09de58a","sg-1828af63"]
+
+  subnet_id = "${aws_subnet.default.id}"
+
+}
+
+
+
+
+
+resource "aws_route_table_association" "a" {
+  subnet_id      = "${aws_subnet.default.id}"
+  route_table_id = "rtb-d68740ac"
+
+
+}
