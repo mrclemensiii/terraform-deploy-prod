@@ -222,13 +222,6 @@ resource "aws_security_group" "rds" {
     protocol    = "tcp"
     cidr_blocks = ["${var.cidr_block}"]
   }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 }
 ##################################################
 
@@ -288,7 +281,6 @@ resource "aws_db_instance_role_association" "default" {
   role_arn               = "arn:aws:iam::384972204486:role/allowrdsforwo-odbtransfer"
 }
 ##################################################
-
 
 ##################################################
 # Create Record in Route 53

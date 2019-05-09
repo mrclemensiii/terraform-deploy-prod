@@ -248,9 +248,10 @@ resource "aws_db_subnet_group" "default" {
 resource "aws_db_instance" "default" {
   name = "${var.rds_db_name}"
   identifier = "${lower(var.customer_name)}-${lower(var.envrionment)}"
+  snapshot_identifier = "woprogram-baseline2017r1-29-97df"
   tags = {Name = "${var.customer_name}"}
   
-  allocated_storage = 100
+  allocated_storage = 200
   auto_minor_version_upgrade = "false"
   backup_retention_period = 7
   backup_window = "03:00-06:00"
