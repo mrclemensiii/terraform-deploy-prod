@@ -2,6 +2,17 @@ provider "aws" {
   region = "${var.aws_region}"
 }
 
+terraform {
+  backend "remote" {
+    hostname = "app.terraform.io"
+    organization = "WideOrbit"
+
+    workspaces {
+      name = "MRC-SERVICES-PROD"
+    }
+  }
+}
+
 ##################################################
 # Import Public Key into EC2 Instance for Access
 ##################################################
@@ -248,7 +259,6 @@ resource "aws_db_subnet_group" "default" {
 resource "aws_db_instance" "default" {
   name = "${var.rds_db_name}"
   identifier = "${lower(var.customer_name)}-${lower(var.envrionment)}"
-  snapshot_identifier = "woprogram-baseline2017r1-29-97df"
   tags = {Name = "${var.customer_name}"}
   
   allocated_storage = 100

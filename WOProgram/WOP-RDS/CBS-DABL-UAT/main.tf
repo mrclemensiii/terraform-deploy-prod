@@ -2,6 +2,17 @@ provider "aws" {
   region = "${var.aws_region}"
 }
 
+terraform {
+  backend "remote" {
+    hostname = "app.terraform.io"
+    organization = "WideOrbit"
+
+    workspaces {
+      name = "CBS-DABL-UAT"
+    }
+  }
+}
+
 ##################################################
 # Import Public Key into EC2 Instance for Access
 ##################################################
@@ -222,6 +233,13 @@ resource "aws_security_group" "rds" {
     protocol    = "tcp"
     cidr_blocks = ["${var.cidr_block}"]
   }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  } 
 }
 ##################################################
 
