@@ -34,12 +34,12 @@ tags {
 # the instances over SSH and HTTP
 ##################################################
 resource "aws_security_group" "default" {
-  name        = "${var.customer_name}-${var.envrionment}"
+  name        = "${var.customer_name}"
   description = "${var.customer_name}"
   vpc_id      = "${lookup(var.vpc, var.aws_region)}"
 
 tags {
-	Name = "${var.customer_name}"
+	Name = "${var.customer_name}-${var.envrionment}"
     }
 
   ingress {

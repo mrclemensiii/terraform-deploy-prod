@@ -43,8 +43,8 @@ tags {
     }
 
   ingress {
-    from_port   = 9000
-    to_port     = 9000
+    from_port               = "${var.sg_from_port}"
+    to_port                 = "${var.sg_to_port}"
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -254,13 +254,14 @@ resource "aws_route_table_association" "a" {
 # Setup Network Load Balancer for One Server Deployments
 ########################################################
 # Create a new Network Load Balancer
-resource "aws_lb" "nlb" {
+resource "aws_lb" "nlbdb" {
+  count                     = "${var.appdblb}"
   name  = "${var.customer_name}-NLB-${var.envrionment}"
   load_balancer_type = "network"
   internal = false
   subnets = ["${aws_subnet.default.id}"]
 
-  enable_deletion_protection = true
+  enable_deletion_protection = false
 
    tags {
     Name = "${var.customer_name}-nlb"
@@ -270,7 +271,8 @@ resource "aws_lb" "nlb" {
 }
 
 # Create a new Target Group
-resource "aws_lb_target_group" "nlb" {
+resource "aws_lb_target_group" "nlbdb" {
+  count                     = "${var.appdblb}"
   name = "${var.customer_name}-TG-${var.envrionment}"
   port = "9000"
   protocol = "TCP"
@@ -284,12 +286,13 @@ resource "aws_lb_target_group" "nlb" {
 }
 
 # Create NLB Listener
-resource "aws_lb_listener" "nlb" {
-  load_balancer_arn = "${aws_lb.nlb.arn}"
+resource "aws_lb_listener" "nlbdb" {
+  count                     = "${var.appdblb}"
+  load_balancer_arn = "${aws_lb.nlbdb.arn}"
   port = "${var.nlb_listener_port}"
   protocol = "TCP"
 default_action {
-    target_group_arn = "${aws_lb_target_group.nlb.arn}"
+    target_group_arn = "${aws_lb_target_group.nlbdb.arn}"
     type = "forward"
   }
 }
@@ -297,7 +300,7 @@ default_action {
 
 resource "aws_lb_target_group_attachment" "nlb_db_target" {
   count = "${var.appdblb}"
-  target_group_arn = "${aws_lb_target_group.nlb.arn}"
+  target_group_arn = "${aws_lb_target_group.nlbdb.arn}"
   # define multiple targets like this?
   target_id = "${aws_instance.Wideorbit-DB.id}"
   #target_id = "${var.XXXX-appserver2}"
@@ -305,34 +308,83 @@ resource "aws_lb_target_group_attachment" "nlb_db_target" {
   # target_id = ["${var.XXXX-appserver1}", "${var.XXXX-appserver2}"]
   #target_id = ["${aws_instance.Wideorbit-DB.id}", "${element(aws_instance.Wideorbit-App.*.id, count.index)}"]
 
-  port = 9000
+  port = "${var.nlb_listener_port}"
   }
-
-resource "aws_lb_target_group_attachment" "nlb_app_target" {
-   count = "${var.applb}"
-   target_group_arn = "${aws_lb_target_group.nlb.arn}"
-  # define multiple targets like this?
-  # target_id = "${aws_instance.Wideorbit-App.id}"
-  target_id = "${element(aws_instance.Wideorbit-App.*.id, count.index)}"
-  #target_id = "${var.XXXX-appserver2}"
-  # or as a list?
-  # target_id = ["${var.XXXX-appserver1}", "${var.XXXX-appserver2}"]
-  #target_id = ["${aws_instance.Wideorbit-DB.id}", "${element(aws_instance.Wideorbit-App.*.id, count.index)}"]
-
-  port = 9000
-  }
-
 ##################################################
 
+########################################################
+# Setup Network Load Balancer for Multi Server Deployments
+########################################################
+# Create a new Network Load Balancer
+resource "aws_lb" "nlbapp" {
+  count                     = "${var.applb}"
+  name                      = "${var.customer_name}-NLB-${var.envrionment}"
+  load_balancer_type        = "network"
+  internal                  = false																	
+  subnets                   = ["${aws_subnet.default.id}"]
+
+  enable_deletion_protection = false
+
+   tags {
+    Name                    = "${var.customer_name}-nlb"
+    Customer                = "${var.customer_name}"
+    Environment             = "${var.envrionment}"
+  }
+}
+# Create a new Target Group
+resource "aws_lb_target_group" "nlbapp" {
+  count                     = "${var.app_instance_count}"
+  name                      = "${var.customer_name}-TG-${var.envrionment}-900${count.index}"
+  port                      = "900${count.index}"
+  protocol                  = "TCP"
+  vpc_id                    = "${lookup(var.vpc, var.aws_region)}"
+ 
+  tags {
+    Name                    = "${var.customer_name}-tg"
+    Customer                = "${var.customer_name}"
+    Environment             = "${var.envrionment}"
+  }
+}
+
+# Create NLB Listener
+resource "aws_lb_listener" "nlbapp" {
+  count                     = "${var.app_instance_count}"
+  load_balancer_arn         = "${aws_lb.nlbapp.arn}"
+  port                      = "900${count.index}"
+  protocol                  = "TCP"
+default_action {
+    target_group_arn        = "${element(aws_lb_target_group.nlbapp.*.arn, count.index)}"
+    type                    = "forward"
+  }
+}
+
+resource "aws_lb_target_group_attachment" "nlb_app_target" {
+  count                     = "${var.app_instance_count}"
+  target_group_arn          = "${element(aws_lb_target_group.nlbapp.*.arn, count.index)}"
+  target_id                 = "${element(aws_instance.Wideorbit-App.*.id, count.index)}"
+
+  port                      = "900${count.index}"
+  }
+########################################################
 
 ##################################################
 # Create Record in Route 53
 ##################################################
-resource "aws_route53_record" "woexchange" {
-  zone_id = "${var.zone_id}"
-  name = "${var.record_set_name}"
-  type = "${var.record_type}"
-  ttl = "300"
-  records = ["${aws_lb.nlb.dns_name}"]
+resource "aws_route53_record" "woexchangedb" {
+  count                     = "${var.appdblb}"
+  zone_id                   = "${var.zone_id}"
+  name                      = "${var.record_set_name}"
+  type                      = "${var.record_type}"
+  ttl                       = "300"
+  records                   = ["${aws_lb.nlbdb.dns_name}"]
+}
+
+resource "aws_route53_record" "woexchangeapp" {
+  count                     = "${var.applb}"
+  zone_id                   = "${var.zone_id}"
+  name                      = "${var.record_set_name}"
+  type                      = "${var.record_type}"
+  ttl                       = "300"
+  records                   = ["${aws_lb.nlbapp.dns_name}"]
 }
 ##################################################
