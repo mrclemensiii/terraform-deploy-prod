@@ -31,6 +31,23 @@ variable "appinstance_type"{
    DESCRIPTION
 }
 
+variable "dbinstance_type"{
+  description = <<DESCRIPTION
+  DB Instance size: Use size specificied in design document.
+  You must enter a value here even in a single server deployment.
+  This will be provided in the Deployment Template Spreadsheet.
+  Enter:
+      t3.xlarge - SQL Web, SQL Ent, Std
+  DESCRIPTION
+}
+
+variable "db_instance_count" {
+  description = <<DESCRIPTION
+  Number of DB Instances to be provisioned.  In a single server
+  deployment you will enter a 1 here.
+  DESCRIPTION
+}
+
 variable "app_instance_count" {
   description = <<DESCRIPTION
   Number of App Instances to be provisioned.  In a single server
@@ -48,6 +65,13 @@ variable "customer_name" {
 variable "envrionment" {
   description = <<DESCRIPTION
   Name of the Environment(PROD, DR, STG, UAT, DEV, TST).  This will be provided in the Deployment
+  Template Spreadsheet.
+  DESCRIPTION
+}
+
+variable "db_role" {
+  description = <<DESCRIPTION
+  Name of the DataBase server role(DB, APPDB).  This will be provided in the Deployment
   Template Spreadsheet.
   DESCRIPTION
 }
@@ -84,7 +108,30 @@ variable "record_type" {
  
 }
 
+variable "sg_from_port" {
+  description = "Provide the starting ingress port for the default security group"
+  default = "9000"
+ 
+}
 
+variable "sg_to_port" {
+  description = "Provide the ending ingress port for the default security group"
+  default = "9000"
+ 
+}
+
+variable "nlb_listener_port" {
+  description = "Provide the the TCP port for the NLB listener"
+  default = "9000"
+ 
+}
+
+variable "db_computer_name" {
+  description = <<DESCRIPTION
+  Provide the name minus the number of the Database or App/DB computer that will be used in Active Directory i.e. SHO-AVATRDBVP
+  This is found in the Customer Build Doc
+  DESCRIPTION
+}
 
 variable "app_computer_name" {
   description = <<DESCRIPTION
@@ -93,6 +140,27 @@ variable "app_computer_name" {
   DESCRIPTION
 }
 
+variable "appdblb" {
+  description = <<DESCRIPTION
+  Number of AppDB Load Balancers to be provisioned.
+  In a single server deployment you will enter a 1 here.
+  If a multiple server deployments enter 0.
+  Choices:
+      1
+      0
+  DESCRIPTION
+}
+
+variable "applb" {
+  description = <<DESCRIPTION
+  Number of App Load Balancers to be provisioned.
+  In a single server deployment you will enter a 0 here.
+  If a multiple server deployments enter 1.
+  Choices:
+      1
+      0
+  DESCRIPTION
+}
 
 variable "client_ou" {
   description = <<DESCRIPTION
@@ -108,54 +176,6 @@ variable "backup_state" {
   default = "Yes"
   
 }
-
-########################################################
-# Updated for WOProgram with RDS
-########################################################
-variable "nlb_listener_port" {
-  description = "Provide the TCP port for the NLB listener"
-  default     = "443"
-}
-
-variable "rds_db_name" {
-  description = <<DESCRIPTION
-  DB Instance Name should be 8 characters or less and
-  convey customer and environment information.
-  For example:
-	NATGDEV
-  DESCRIPTION
-}
-
-variable "rds_db_password" {
-  description = <<DESCRIPTION
-  Please provide a complex password for the RDS WOMaster Account
-  DESCRIPTION
-}
-
-variable "rds_param_group" {
-  description = <<DESCRIPTION
-  Please provide the parameter group name here:
-  DESCRIPTION
-  default = "woprogram-oracle-se2-12-2"
-}
-
-variable "rds_option_group" {
-  description = <<DESCRIPTION
-  Please provide the option group name here:
-  DESCRIPTION
-  default = "woprogram-oracle-se2-12-2"
-}
-
-variable "rds_az_subnet_id" {
-  type = "map"
-
-  default = {
-    "us-east-1" = "subnet-09296d1c8db377d94"
-    "us-west-2" = "subnet-038f87a11dc2242a5"
-  }
-}
-
-########################################################
 
 ########################################################
 # Variables mapped by AMI
@@ -214,8 +234,8 @@ variable "vpc" {
 variable "avail_zone" {
   type = "map"
   default = {
-    "us-east-1" = ["us-east-1b", "us-east-1a", "us-east-1d"]
-    "us-west-2" = ["us-west-2b", "us-west-2a", "us-west-2d"]
+    "us-east-1" = ["us-east-1c", "us-east-1a", "us-east-1d"]
+    "us-west-2" = ["us-west-2b", "us-west-2c", "us-west-2a"]
   }
 }
 

@@ -35,7 +35,7 @@ tags {
 ##################################################
 
 resource "aws_subnet" "dr" {
-  count = "${var.dr}"
+  count = "${var.use_dr}"
   vpc_id = "${lookup(var.vpc, var.aws_region)}"
   cidr_block = "${var.dr_cidr_block}"
   availability_zone = "${lookup(var.dr_avail_zone, var.aws_region)}"
@@ -176,7 +176,7 @@ EOF
 ##################################################
 resource "aws_instance" "Wideorbit-DB-DR" {
   iam_instance_profile = "WOCLOUD-MGMT"  
-  count = "${var.dr ? var.db_instance_count : 0}"
+  count = "${var.use_dr ? var.db_instance_count : 0}"
   connection {
     # The default username for our AMI
     user = "wideorbit"
@@ -277,7 +277,7 @@ resource "aws_eip" "Wideorbit-DBEIP" {
 # Configure Elastic IP for DR DB Server
 ##################################################
 resource "aws_eip" "Wideorbit-DRDBEIP" {
-  count = "${var.dr ? var.db_instance_count : 0}"
+  count = "${var.use_dr ? var.db_instance_count : 0}"
   instance = "${element(aws_instance.Wideorbit-DB-DR.*.id, count.index)}"
 }
 ##################################################
@@ -295,7 +295,7 @@ resource "aws_eip" "Wideorbit-AppEIP" {
 # Configure Elastic IP for DR APP Server
 ##################################################
 resource "aws_eip" "Wideorbit-DRAppEIP" {
-  count = "${var.dr ? var.app_instance_count : 0}"
+  count = "${var.use_dr ? var.app_instance_count : 0}"
   instance = "${element(aws_instance.Wideorbit-App-DR.*.id, count.index)}"
 }
 ##################################################
@@ -371,7 +371,7 @@ EOF
 ##################################################
 resource "aws_instance" "Wideorbit-App-DR" {
   iam_instance_profile = "WOCLOUD-MGMT"
-  count = "${var.dr ? var.app_instance_count : 0}"
+  count = "${var.use_dr ? var.app_instance_count : 0}"
   connection {
     # The default username for our AMI
     user = "wideorbit"
@@ -446,7 +446,7 @@ resource "aws_route_table_association" "a" {
 # Associate Route Table to new DR Subnet
 ##################################################
 resource "aws_route_table_association" "dr" {
-  count = "${var.dr}"
+  count = "${var.use_dr}"
   subnet_id      = "${aws_subnet.dr.id}"
   route_table_id = "${lookup(var.rtb, var.aws_region)}"
 }
@@ -592,7 +592,7 @@ resource "aws_route53_record" "woexchangeapp" {
 ########################################################
 # Create a new Network Load Balancer
 resource "aws_lb" "nlbdbdr" {
-  count = "${(var.dr > signum(var.app_instance_count)) ? 1 : 0}"
+  count = "${(var.use_dr > signum(var.app_instance_count)) ? 1 : 0}"
   name  = "${var.customer_name}-NLB-DR"
   load_balancer_type = "network"
   internal = false
@@ -609,7 +609,7 @@ resource "aws_lb" "nlbdbdr" {
 
 # Create a new Target Group
 resource "aws_lb_target_group" "nlbdbdr" {
-  count = "${(var.dr > signum(var.app_instance_count)) ? 1 : 0}"
+  count = "${(var.use_dr > signum(var.app_instance_count)) ? 1 : 0}"
   name = "${var.customer_name}-TG-DR"
   port = "9000"
   protocol = "TCP"
@@ -624,7 +624,7 @@ resource "aws_lb_target_group" "nlbdbdr" {
 
 # Create NLB Listener
 resource "aws_lb_listener" "nlbdbdr" {
-  count = "${(var.dr > signum(var.app_instance_count)) ? 1 : 0}"
+  count = "${(var.use_dr > signum(var.app_instance_count)) ? 1 : 0}"
   load_balancer_arn = "${aws_lb.nlbdbdr.arn}"
   port = "${var.nlb_listener_port}"
   protocol = "TCP"
@@ -636,7 +636,7 @@ default_action {
 
 
 resource "aws_lb_target_group_attachment" "nlb_db_targetdr" {
-  count = "${(var.dr > signum(var.app_instance_count)) ? 1 : 0}"
+  count = "${(var.use_dr > signum(var.app_instance_count)) ? 1 : 0}"
   target_group_arn = "${aws_lb_target_group.nlbdbdr.arn}"
   target_id = "${aws_instance.Wideorbit-DB-DR.id}"
 
@@ -649,7 +649,7 @@ resource "aws_lb_target_group_attachment" "nlb_db_targetdr" {
 ########################################################
 # Create a new Network Load Balancer
 resource "aws_lb" "nlbappdr" {
-  count = "${(signum(var.dr) * signum(var.app_instance_count)) == 1 ? 1 : 0}"
+  count = "${(signum(var.use_dr) * signum(var.app_instance_count)) == 1 ? 1 : 0}"
   name = "${var.customer_name}-NLB-DR"
   load_balancer_type = "network"
   internal = false																	
@@ -665,7 +665,7 @@ resource "aws_lb" "nlbappdr" {
 }
 # Create a new Target Group
 resource "aws_lb_target_group" "nlbappdr" {
-  count = "${var.dr ? var.app_instance_count : 0}"
+  count = "${var.use_dr ? var.app_instance_count : 0}"
   name                      = "${var.customer_name}-TG-DR-900${count.index}"
   port                      = "900${count.index}"
   protocol                  = "TCP"
@@ -680,7 +680,7 @@ resource "aws_lb_target_group" "nlbappdr" {
 
 # Create NLB Listener
 resource "aws_lb_listener" "nlbappdr" {
-  count                     = "${var.dr ? var.app_instance_count : 0}"
+  count                     = "${var.use_dr ? var.app_instance_count : 0}"
   load_balancer_arn         = "${aws_lb.nlbappdr.arn}"
   port                      = "900${count.index}"
   protocol                  = "TCP"
@@ -691,7 +691,7 @@ default_action {
 }
 
 resource "aws_lb_target_group_attachment" "nlb_app_targetdr" {
-  count                     = "${var.dr ? var.app_instance_count : 0}"
+  count                     = "${var.use_dr ? var.app_instance_count : 0}"
   target_group_arn          = "${element(aws_lb_target_group.nlbappdr.*.arn, count.index)}"
   target_id                 = "${element(aws_instance.Wideorbit-App-DR.*.id, count.index)}"
 
@@ -703,7 +703,7 @@ resource "aws_lb_target_group_attachment" "nlb_app_targetdr" {
 # Create DR Record in Route 53
 ##################################################
 resource "aws_route53_record" "woexchangedbdr" {
-  count = "${(var.dr > signum(var.app_instance_count)) ? 1 : 0}"
+  count = "${(var.use_dr > signum(var.app_instance_count)) ? 1 : 0}"
   zone_id = "${var.zone_id}"
   name = "${replace(var.record_set_name,"/.$/","r")}"
   type = "${var.record_type}"
@@ -712,7 +712,7 @@ resource "aws_route53_record" "woexchangedbdr" {
 }
 
 resource "aws_route53_record" "woexchangeappdr" {
-  count  = "${(signum(var.dr) * signum(var.app_instance_count)) == 1 ? 1 : 0}"
+  count  = "${(signum(var.use_dr) * signum(var.app_instance_count)) == 1 ? 1 : 0}"
   zone_id = "${var.zone_id}"
   name = "${replace(var.record_set_name,"/.$/","r")}"
   type = "${var.record_type}"
