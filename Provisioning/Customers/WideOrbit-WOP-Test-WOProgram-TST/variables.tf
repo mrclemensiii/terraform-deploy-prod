@@ -31,23 +31,6 @@ variable "appinstance_type"{
    DESCRIPTION
 }
 
-variable "dbinstance_type"{
-  description = <<DESCRIPTION
-  DB Instance size: Use size specificied in design document.
-  You must enter a value here even in a single server deployment.
-  This will be provided in the Deployment Template Spreadsheet.
-  Enter:
-      t3.xlarge - SQL Web, SQL Ent, Std
-  DESCRIPTION
-}
-
-variable "db_instance_count" {
-  description = <<DESCRIPTION
-  Number of DB Instances to be provisioned.  In a single server
-  deployment you will enter a 1 here.
-  DESCRIPTION
-}
-
 variable "app_instance_count" {
   description = <<DESCRIPTION
   Number of App Instances to be provisioned.  In a single server
@@ -57,20 +40,14 @@ variable "app_instance_count" {
 
 variable "customer_name" {
   description = <<DESCRIPTION
-  Name of customer.  This will be provided in the Deployment Template Spreadsheet.
+  Name of customer server.  This will be provided in the Deployment
+  Template Spreadsheet. Note this should be one word no spaces.
   DESCRIPTION
 }
 
 variable "envrionment" {
   description = <<DESCRIPTION
   Name of the Environment(PROD, DR, STG, UAT, DEV, TST).  This will be provided in the Deployment
-  Template Spreadsheet.
-  DESCRIPTION
-}
-
-variable "db_role" {
-  description = <<DESCRIPTION
-  Name of the DataBase server role(DB, APPDB).  This will be provided in the Deployment
   Template Spreadsheet.
   DESCRIPTION
 }
@@ -89,17 +66,9 @@ variable "cidr_block" {
   DESCRIPTION
 }
 
-variable "dr_cidr_block" {
-  description = <<DESCRIPTION
-  Next /27 cidr to be used.  This will be provided in the Deployment
-  Template Spreadsheet.
-  DESCRIPTION
-}
-
 variable "zone_id" {
   description = "Provide the Zone ID in Route 53 Use Z272VSMY1S2MLD for Terraform Prod Env"
   default = "Z272VSMY1S2MLD"
-
 }
 
 variable "record_set_name" {
@@ -111,70 +80,124 @@ variable "record_set_name" {
 variable "record_type" {
   description = "Provide the DNS record type A or CNAME, always choose CNAME unless directed otherwise."
   default = "CNAME"
- 
-}
-
-variable "sg_from_port" {
-  description = "Provide the starting ingress port for the default security group"
-  default = "9000"
- 
-}
-
-variable "sg_to_port" {
-  description = "Provide the ending ingress port for the default security group"
-  default = "9000"
- 
-}
-
-variable "nlb_listener_port" {
-  description = "Provide the the TCP port for the NLB listener"
-  default = "9000"
- 
-}
-
-variable "db_computer_name" {
-  description = <<DESCRIPTION
-  Provide the name minus the number of the Database or App/DB computer and environment letter 
-  that will be used in Active Directory.  This is found in the Customer Build Doc.   
-  Do not include the final 3 characters. For example if the server name is CBS-AVATRAPVP00 you 
-  would only provide CBS-AVATRAPV
-  DESCRIPTION
 }
 
 variable "app_computer_name" {
   description = <<DESCRIPTION
-  Provide the name minus the number of the App computer and environment letter 
-  that will be used in Active Directory. This is found in the Customer Build Doc.   
-  Do not include the final 3 characters. For example if the server name is CBS-AVATRAPVP00 you 
-  would only provide CBS-AVATRAPV
-  DESCRIPTION
-}
-
-variable "dr" {
-  description = <<DESCRIPTION
-  Well this deployment have DR?
-  If DR is required enter a 1 here.
-  If no DR is required enter a 0 here.
-  Choices:
-      1
-      0
+  Provide the name of the App computer minus the number that will be used in Active Directory i.e. SHO-AVATRAPVP
+  This is found in the Customer Build Doc
   DESCRIPTION
 }
 
 variable "client_ou" {
   description = <<DESCRIPTION
   Enter the OU location for the server in Active Directory
-  It is typically the name of the Client i.e. "PiedPiper" without spaces
-  This is listed inside the build doc, if not you must create the OU first before running this script.
-  Location in AD will be under wocloud.com -> Clients ->
+  This typically the name of the Client i.e. "PiedPiper" without spaces
+  You must create the OU first before running this script.
+  This will be under wocloud.com -> Clients ->
   DESCRIPTION
 }
 
 variable "backup_state" {
   description = "Enables backup of all volumes via an AMI"
   default = "Yes"
-  
 }
+
+########################################################
+# Updated for WOProgram with RDS
+########################################################
+variable "rds_storage" {
+  description = "Provided the amount of storage to allocate to Oracle"
+  default = 60
+}
+
+variable "rds_user" {
+  description = "Provided the master user name for the database"
+  default = "womaster"
+}
+
+variable "rds_instance" {
+  description = "Provided the instance class for the database"
+  default = "db.m5.large"
+}
+
+variable "rds_backup_retention" {
+  description = "Provided the backup retention period for the database"
+  default = 7
+}
+variable "rds_backup_window" {
+  description = "Provided the backup window for the database"
+  default = "03:00-06:00"
+}
+
+variable "rds_maintenance_window" {
+  description = "Provided the maintenance window for the database"
+  default = "Sun:06:00-Sun:09:00"
+}
+
+variable "rds_storage_type" {
+  description = "Provided the storage type for the database"
+  default = "gp2"
+}
+
+variable "rds_engine" {
+  description = "Provided the oracle engine for the database"
+  default = "oracle-se2"
+}
+
+variable "rds_engine_vers" {
+  description = "Provided the oracle engine version for the database"
+  default = "12.2.0.1.ru-2019-01.rur-2019-01.r1"
+}
+
+variable "rds_role_arn" {
+  description = "The ARN of the IAM Role that allows for RDS and S3 integration"
+  default = "arn:aws:iam::384972204486:role/allowrdsforwo-odbtransfer"
+}
+
+variable "nlb_listener_port" {
+  description = "Provide the TCP port for the NLB listener"
+  default     = "443"
+}
+
+variable "rds_db_name" {
+  description = <<DESCRIPTION
+  DB Instance Name should be 8 characters or less and
+  convey customer and environment information.
+  For example:
+	NATGDEV
+  DESCRIPTION
+}
+
+variable "rds_db_password" {
+  description = <<DESCRIPTION
+  Please provide a complex password for the RDS WOMaster Account
+  DESCRIPTION
+}
+
+variable "rds_param_group" {
+  description = <<DESCRIPTION
+  Please provide the parameter group name here:
+  DESCRIPTION
+  default = "woprogram-oracle-se2-12-2"
+}
+
+variable "rds_option_group" {
+  description = <<DESCRIPTION
+  Please provide the option group name here:
+  DESCRIPTION
+  default = "woprogram-oracle-se2-12-2"
+}
+
+variable "rds_az_subnet_id" {
+  type = "map"
+  default = {
+    "us-east-1" = "subnet-09296d1c8db377d94"
+    "us-west-2" = "subnet-038f87a11dc2242a5"
+  }
+}
+
+########################################################
 
 ########################################################
 # Variables mapped by AMI
@@ -233,17 +256,8 @@ variable "vpc" {
 variable "avail_zone" {
   type = "map"
   default = {
-    "us-east-1" = ["us-east-1b", "us-east-1c", "us-east-1a"]
-    "us-west-2" = ["us-west-2b", "us-west-2a"]
-  }
-}
-
-# DR Availability Zone variable mapped by Region
-variable "dr_avail_zone" {
-  type = "map"
-  default = {
-    "us-east-1" = "us-east-1d"
-    "us-west-2" = "us-west-2c"
+    "us-east-1" = ["us-east-1b", "us-east-1a", "us-east-1d"]
+    "us-west-2" = ["us-west-2b", "us-west-2a", "us-west-2d"]
   }
 }
 

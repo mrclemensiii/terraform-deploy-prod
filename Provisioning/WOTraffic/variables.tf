@@ -90,18 +90,9 @@ variable "cidr_block" {
   DESCRIPTION
 }
 
-variable "dr_cidr_block" {
-  description = <<DESCRIPTION
-  Next /27 cidr to be used for DR.  You must enter a cidr address regardless of whether or not DR
-  will be deployed with this solution.  If DR will not be implemented enter 1.1.1.1/27.
-  Otherwise this will be provided in the Deployment Template Spreadsheet.
-  DESCRIPTION
-}
-
 variable "zone_id" {
   description = "Provide the Zone ID in Route 53 Use Z272VSMY1S2MLD for Terraform Prod Env"
   default = "Z272VSMY1S2MLD"
-
 }
 
 variable "record_set_name" {
@@ -148,22 +139,11 @@ variable "app_computer_name" {
   DESCRIPTION
 }
 
-variable "use_dr" {
-  description = <<DESCRIPTION
-  Well this deployment have DR?
-  If DR is required enter a 1 here.
-  If no DR is required enter a 0 here.
-  Choices:
-      1
-      0
-  DESCRIPTION
-}
-
 variable "client_ou" {
   description = <<DESCRIPTION
   Enter the OU location for the server in Active Directory
   It is typically the name of the Client i.e. "PiedPiper" without spaces
-  This is listed inside the build doc.  You must create the OU first before running this script.
+  This is listed inside the build doc, if not you must create the OU first before running this script.
   Location in AD will be under wocloud.com -> Clients ->
   DESCRIPTION
 }
@@ -231,17 +211,8 @@ variable "vpc" {
 variable "avail_zone" {
   type = "map"
   default = {
-    "us-east-1" = ["us-east-1b", "us-east-1c", "us-east-1a"]
-    "us-west-2" = ["us-west-2b", "us-west-2a"]
-  }
-}
-
-# DR Availability Zone variable mapped by Region
-variable "dr_avail_zone" {
-  type = "map"
-  default = {
-    "us-east-1" = "us-east-1d"
-    "us-west-2" = "us-west-2c"
+    "us-east-1" = ["us-east-1b", "us-east-1c", "us-east-1a", "us-east-1d"]
+    "us-west-2" = ["us-west-2b", "us-west-2a", "us-west-2c"]
   }
 }
 

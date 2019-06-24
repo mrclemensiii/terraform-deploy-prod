@@ -2,6 +2,10 @@ provider "aws" {
   region = "${var.aws_region}"
 }
 
+terraform {
+  required_version = "< 0.12"
+}
+
 ##################################################
 # Import Public Key into EC2 Instance for Access
 ##################################################
@@ -58,6 +62,7 @@ tags {
   }
 }
 ##################################################
+
 
 
 ##################################################
@@ -191,8 +196,10 @@ default_action {
   }
 }
 
+
+
 resource "aws_lb_target_group_attachment" "nlb_app_target" {
-  # count = "${var.applb}"
+   #count = "${var.applb}"
    target_group_arn = "${aws_lb_target_group.nlb.arn}"
   # define multiple targets like this?
   # target_id = "${aws_instance.Wideorbit-App.id}"
@@ -250,19 +257,19 @@ resource "aws_db_instance" "default" {
   identifier = "${lower(var.customer_name)}-${lower(var.envrionment)}"
   tags = {Name = "${var.customer_name}"}
   
-  allocated_storage = 100
+  allocated_storage = "${var.rds_storage}"
   auto_minor_version_upgrade = "false"
-  backup_retention_period = 7
-  backup_window = "03:00-06:00"
+  backup_retention_period = "${var.rds_backup_retention}"
+  backup_window = "${var.rds_backup_window}"
   copy_tags_to_snapshot = "true"
   availability_zone = "${aws_subnet.default.availability_zone}"
-  maintenance_window = "Sun:06:00-Sun:09:00"
+  maintenance_window = "${var.rds_maintenance_window}"
   license_model = "license-included"
-  storage_type = "gp2"
-  engine = "oracle-se2"
-  engine_version = "12.2.0.1.ru-2019-01.rur-2019-01.r1"
-  instance_class = "db.m5.large"
-  username = "womaster"
+  storage_type = "${var.rds_storage_type}"
+  engine = "${var.rds_engine}"
+  engine_version = "${var.rds_engine_vers}"
+  instance_class = "${var.rds_instance}"
+  username = "${var.rds_user}"
   password = "${var.rds_db_password}"
   parameter_group_name = "${var.rds_param_group}"
   option_group_name = "${var.rds_option_group}"
@@ -285,7 +292,7 @@ resource "aws_db_instance" "default" {
 resource "aws_db_instance_role_association" "default" {
   db_instance_identifier = "${aws_db_instance.default.id}"
   feature_name           = "S3_INTEGRATION"
-  role_arn               = "arn:aws:iam::384972204486:role/allowrdsforwo-odbtransfer"
+  role_arn               = "${var.rds_role_arn}"
 }
 ##################################################
 

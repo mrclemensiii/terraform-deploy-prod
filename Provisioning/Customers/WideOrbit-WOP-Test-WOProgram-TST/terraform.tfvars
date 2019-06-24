@@ -36,7 +36,7 @@ cidr_block              = "10.3.6.32/27"
 record_set_name         = "na-231520-100-t"
 
 # Enter the APP Computer Name excluding the number (ex: mrc-avatrapvp)
-app_computer_name       = "wot-avapgapvt"
+app_computer_name       = "wot-aorpgapvt"
 
 # Enter the name of the DB.  It should be 8 or less characters in length and all uppercase
 rds_db_name             = "WOTTST"
@@ -45,7 +45,7 @@ rds_db_name             = "WOTTST"
 client_ou               = "Test"
 
 # Enter the amount of storage to allocate, in GBs, to the RDS instance
-rds_storage             = 100
+rds_storage             = 40
 
 # Enter the name of the Master User Account.  By default use womaster
 rds_user                = "womaster"

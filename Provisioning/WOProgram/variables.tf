@@ -41,7 +41,7 @@ variable "app_instance_count" {
 variable "customer_name" {
   description = <<DESCRIPTION
   Name of customer server.  This will be provided in the Deployment
-  Template Spreadsheet.
+  Template Spreadsheet. Note this should be one word no spaces.
   DESCRIPTION
 }
 
@@ -69,7 +69,6 @@ variable "cidr_block" {
 variable "zone_id" {
   description = "Provide the Zone ID in Route 53 Use Z272VSMY1S2MLD for Terraform Prod Env"
   default = "Z272VSMY1S2MLD"
-
 }
 
 variable "record_set_name" {
@@ -81,37 +80,81 @@ variable "record_set_name" {
 variable "record_type" {
   description = "Provide the DNS record type A or CNAME, always choose CNAME unless directed otherwise."
   default = "CNAME"
- 
 }
-
-
 
 variable "app_computer_name" {
   description = <<DESCRIPTION
-  Provide the name minus the number of the App computer that will be used in Active Directory i.e. SHO-AVATRAPVP
+  Provide the name of the App computer minus the number that will be used in Active Directory i.e. SHO-AVATRAPVP
   This is found in the Customer Build Doc
   DESCRIPTION
 }
 
-
 variable "client_ou" {
   description = <<DESCRIPTION
   Enter the OU location for the server in Active Directory
-  It is typically the name of the Client i.e. "PiedPiper" without spaces
-  This is listed inside the build doc, if not you must create the OU first before running this script.
-  Location in AD will be under wocloud.com -> Clients ->
+  This typically the name of the Client i.e. "PiedPiper" without spaces
+  You must create the OU first before running this script.
+  This will be under wocloud.com -> Clients ->
   DESCRIPTION
 }
 
 variable "backup_state" {
   description = "Enables backup of all volumes via an AMI"
   default = "Yes"
-  
 }
 
 ########################################################
 # Updated for WOProgram with RDS
 ########################################################
+variable "rds_storage" {
+  description = "Provided the amount of storage to allocate to Oracle"
+  default = 60
+}
+
+variable "rds_user" {
+  description = "Provided the master user name for the database"
+  default = "womaster"
+}
+
+variable "rds_instance" {
+  description = "Provided the instance class for the database"
+  default = "db.m5.large"
+}
+
+variable "rds_backup_retention" {
+  description = "Provided the backup retention period for the database"
+  default = 7
+}
+variable "rds_backup_window" {
+  description = "Provided the backup window for the database"
+  default = "03:00-06:00"
+}
+
+variable "rds_maintenance_window" {
+  description = "Provided the maintenance window for the database"
+  default = "Sun:06:00-Sun:09:00"
+}
+
+variable "rds_storage_type" {
+  description = "Provided the storage type for the database"
+  default = "gp2"
+}
+
+variable "rds_engine" {
+  description = "Provided the oracle engine for the database"
+  default = "oracle-se2"
+}
+
+variable "rds_engine_vers" {
+  description = "Provided the oracle engine version for the database"
+  default = "12.2.0.1.ru-2019-01.rur-2019-01.r1"
+}
+
+variable "rds_role_arn" {
+  description = "The ARN of the IAM Role that allows for RDS and S3 integration"
+  default = "arn:aws:iam::384972204486:role/allowrdsforwo-odbtransfer"
+}
+
 variable "nlb_listener_port" {
   description = "Provide the TCP port for the NLB listener"
   default     = "443"
@@ -148,7 +191,6 @@ variable "rds_option_group" {
 
 variable "rds_az_subnet_id" {
   type = "map"
-
   default = {
     "us-east-1" = "subnet-09296d1c8db377d94"
     "us-west-2" = "subnet-038f87a11dc2242a5"

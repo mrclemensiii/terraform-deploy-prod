@@ -2,6 +2,10 @@ provider "aws" {
   region = "${var.aws_region}"
 }
 
+terraform {
+  required_version = "< 0.12"
+}
+
 ##################################################
 # Import Public Key into EC2 Instance for Access
 ##################################################
@@ -34,17 +38,17 @@ tags {
 # the instances over SSH and HTTP
 ##################################################
 resource "aws_security_group" "default" {
-  name        = "${var.customer_name}"
+  name        = "${var.customer_name}-${var.envrionment}"
   description = "${var.customer_name}"
   vpc_id      = "${lookup(var.vpc, var.aws_region)}"
 
 tags {
-	Name = "${var.customer_name}-${var.envrionment}"
+	Name = "${var.customer_name}"
     }
 
   ingress {
-    from_port   = 9000
-    to_port     = 9000
+    from_port   = "${var.nlb_listener_port}"
+    to_port     = "${var.nlb_listener_port}"
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -59,108 +63,6 @@ tags {
 }
 ##################################################
 
-
-##################################################
-# Database Instance Creation
-##################################################
-resource "aws_instance" "Wideorbit-DB" {
-  iam_instance_profile = "WOCLOUD-MGMT"  
-  count = "${var.db_instance_count}"
-  connection {
-    # The default username for our AMI
-    user = "wideorbit"
-  }
-
- tags {
-    Name = "${var.db_computer_name}0${count.index}"
-    Customer = "${var.customer_name}"
-    Environment = "${var.envrionment}"
-    Role = "${var.db_role}"
-    AmiBackUp = "${var.backup_state}"
-    AMI_Type = "${var.ami_type}"
-  }
-
-  instance_type = "${var.dbinstance_type}"
-  ami = "${lookup(var.win2016_amis, "${var.ami_type}.${var.aws_region}")}"
-
- volume_tags { 
-	Name = "${var.db_computer_name}0${count.index}"
-    }
-
-  root_block_device {
-    volume_type = "gp2"
-    volume_size = "60"
-    delete_on_termination = "true"
-       
-  }
-  ebs_block_device {
-    device_name = "/dev/xvdb"
-    volume_type = "gp2"
-    volume_size = "128"
-    
-  }
- ebs_block_device {
-    device_name = "/dev/xvdc"
-    volume_type = "gp2"
-    volume_size = "384"
-    
-  }
- ebs_block_device {
-    device_name = "/dev/xvdd"
-    volume_type = "gp2"
-    volume_size = "64"
-    
-  }
- ebs_block_device {
-    device_name = "/dev/xvde"
-    volume_type = "io1"
-    volume_size = "128"
-    iops = "500"
-    
-  }
-
-
-  # The name of our keypair we created above.
-  key_name = "${aws_key_pair.auth.id}"
-
-  # Our Security groups
-  vpc_security_group_ids = ["${aws_security_group.default.id}","${lookup(var.sg1, var.aws_region)}","${lookup(var.sg2, var.aws_region)}","${lookup(var.sg3, var.aws_region)}"]
-
-  subnet_id = "${aws_subnet.default.id}"
-  user_data = <<EOF
-<powershell>
-Get-Disk | ?{$_.number -ne 0}| Set-Disk -IsOffline $False
-Get-Disk | ?{$_.number -ne 0}| Set-Disk -isReadOnly $False
-Get-Disk | ?{$_.number -ne 0}| Initialize-Disk -PartitionStyle GPT
-New-Partition -DiskNumber 1 -DriveLetter D -UseMaximumSize
-New-Partition -DiskNumber 2 -DriveLetter E -UseMaximumSize
-New-Partition -DiskNumber 3 -DriveLetter L -UseMaximumSize
-New-Partition -DiskNumber 4 -DriveLetter T -UseMaximumSize
-Format-Volume -DriveLetter D -FileSystem NTFS -NewFileSystemLabel Data -AllocationUnitSize 64KB
-Format-Volume -DriveLetter E -FileSystem NTFS -NewFileSystemLabel Backup -AllocationUnitSize 64KB
-Format-Volume -DriveLetter L -FileSystem NTFS -NewFileSystemLabel Log -AllocationUnitSize 64KB
-Format-Volume -DriveLetter T -FileSystem NTFS -NewFileSystemLabel TempDB -AllocationUnitSize 64KB
-Set-TimeZone -Name "${lookup(var.time_zone, var.aws_region)}"
-$username = "wocloud\woprovdomainjoinsvc"
-$pwdTxt = "76492d1116743f0423413b16050a5345MgB8AGUANgBwAEUAbABkAHgARgBMAFkAdwBLAGsAVwArAGkALwAzADEASwArAEEAPQA9AHwANgAxADMANgA0ADIAMwA2ADcAZgBkADIAMAA4ADAAMQA0ADkANQA0ADQAOAAwADIANQAzADYAZABkAGUANgA4ADIAZQAwADEAYQA1ADYAMQBkADgAZAA1ADUANwBiADgANwA0ADkANwA0ADMAMgBlADgAZAAyAGQANABhADMAZgBhADEAYwA4ADYAMQBkADQAMAA5AGIAMABjAGMANgA3AGIAMwA2ADIAMgAwAGYANABlAGIAZgBhAGEANgBiADcA"
-[Byte[]] $key = (1..16)
-$securePwd = $pwdTxt | ConvertTo-SecureString -Key $key
-$credential = New-Object System.Management.Automation.PSCredential($username,$securePwd)
-Add-Computer -domainname wocloud.com -OUPath "OU=${var.client_ou},OU=Clients,DC=wocloud,DC=com" -NewName "${var.db_computer_name}0${count.index}" -Credential $credential -Force -Restart
-</powershell>
-EOF
-}
-##################################################
-
-
-##################################################
-# Configure Elastic IP for DB Server
-##################################################
-resource "aws_eip" "Wideorbit-DBEIP" {
-  count = "${var.db_instance_count}"
-  instance = "${element(aws_instance.Wideorbit-DB.*.id, count.index)}"
-}
-##################################################
 
 
 ##################################################
@@ -260,7 +162,7 @@ resource "aws_lb" "nlb" {
   internal = false
   subnets = ["${aws_subnet.default.id}"]
 
-  enable_deletion_protection = true
+  enable_deletion_protection = false
 
    tags {
     Name = "${var.customer_name}-nlb"
@@ -272,7 +174,7 @@ resource "aws_lb" "nlb" {
 # Create a new Target Group
 resource "aws_lb_target_group" "nlb" {
   name = "${var.customer_name}-TG-${var.envrionment}"
-  port = "9000"
+  port = "${var.nlb_listener_port}"
   protocol = "TCP"
   vpc_id = "${lookup(var.vpc, var.aws_region)}"
  
@@ -295,21 +197,9 @@ default_action {
 }
 
 
-resource "aws_lb_target_group_attachment" "nlb_db_target" {
-  count = "${var.appdblb}"
-  target_group_arn = "${aws_lb_target_group.nlb.arn}"
-  # define multiple targets like this?
-  target_id = "${aws_instance.Wideorbit-DB.id}"
-  #target_id = "${var.XXXX-appserver2}"
-  # or as a list?
-  # target_id = ["${var.XXXX-appserver1}", "${var.XXXX-appserver2}"]
-  #target_id = ["${aws_instance.Wideorbit-DB.id}", "${element(aws_instance.Wideorbit-App.*.id, count.index)}"]
-
-  port = 9000
-  }
 
 resource "aws_lb_target_group_attachment" "nlb_app_target" {
-   count = "${var.applb}"
+   #count = "${var.applb}"
    target_group_arn = "${aws_lb_target_group.nlb.arn}"
   # define multiple targets like this?
   # target_id = "${aws_instance.Wideorbit-App.id}"
@@ -319,9 +209,91 @@ resource "aws_lb_target_group_attachment" "nlb_app_target" {
   # target_id = ["${var.XXXX-appserver1}", "${var.XXXX-appserver2}"]
   #target_id = ["${aws_instance.Wideorbit-DB.id}", "${element(aws_instance.Wideorbit-App.*.id, count.index)}"]
 
-  port = 9000
+  port = "${var.nlb_listener_port}"
   }
 
+##################################################
+
+##################################################
+# Create RDS Security Group
+##################################################
+resource "aws_security_group" "rds" {
+  vpc_id = "${lookup(var.vpc, var.aws_region)}"
+  name = "${var.customer_name}-${var.envrionment}-RDS-Access"
+  description = "${var.customer_name}"
+  tags = {Name = "${var.customer_name}"}
+  
+  ingress {
+    from_port   = 1521
+    to_port     = 1521
+    protocol    = "tcp"
+    cidr_blocks = ["${var.cidr_block}"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+##################################################
+
+##################################################
+# Create RDS Subnet Group
+##################################################
+resource "aws_db_subnet_group" "default" {
+  name = "${lower(var.customer_name)}-${lower(var.envrionment)}-subnet-group"
+  subnet_ids = ["${lookup(var.rds_az_subnet_id, var.aws_region)}","${aws_subnet.default.id}"]
+  tags = {Name = "${var.customer_name}"}
+}
+##################################################
+
+##################################################
+# Create RDS Database Instance
+##################################################
+resource "aws_db_instance" "default" {
+  name = "${var.rds_db_name}"
+  identifier = "${lower(var.customer_name)}-${lower(var.envrionment)}"
+  tags = {Name = "${var.customer_name}"}
+  
+  allocated_storage = "${var.rds_storage}"
+  auto_minor_version_upgrade = "false"
+  backup_retention_period = "${var.rds_backup_retention}"
+  backup_window = "${var.rds_backup_window}"
+  copy_tags_to_snapshot = "true"
+  availability_zone = "${aws_subnet.default.availability_zone}"
+  maintenance_window = "${var.rds_maintenance_window}"
+  license_model = "license-included"
+  storage_type = "${var.rds_storage_type}"
+  engine = "${var.rds_engine}"
+  engine_version = "${var.rds_engine_vers}"
+  instance_class = "${var.rds_instance}"
+  username = "${var.rds_user}"
+  password = "${var.rds_db_password}"
+  parameter_group_name = "${var.rds_param_group}"
+  option_group_name = "${var.rds_option_group}"
+  vpc_security_group_ids = ["${aws_security_group.rds.id}"]
+  db_subnet_group_name = "${aws_db_subnet_group.default.name}"
+  apply_immediately = "true"
+  
+  ################################################
+  # only used in Dev for testing to allow for quick destroy
+  skip_final_snapshot = "true"
+  deletion_protection = "false"
+  ################################################
+  
+}
+##################################################
+
+##################################################
+# Create RDS Database Instance Role Association
+##################################################
+resource "aws_db_instance_role_association" "default" {
+  db_instance_identifier = "${aws_db_instance.default.id}"
+  feature_name           = "S3_INTEGRATION"
+  role_arn               = "${var.rds_role_arn}"
+}
 ##################################################
 
 

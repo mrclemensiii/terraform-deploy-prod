@@ -57,8 +57,8 @@ variable "app_instance_count" {
 
 variable "customer_name" {
   description = <<DESCRIPTION
-  Name of customer server.  This will be provided in the Deployment
-  Template Spreadsheet.
+  Name of customer.  This will be provided in the Deployment Template Spreadsheet.
+  Note this should be one word no spaces.
   DESCRIPTION
 }
 
@@ -93,7 +93,6 @@ variable "cidr_block" {
 variable "zone_id" {
   description = "Provide the Zone ID in Route 53 Use Z272VSMY1S2MLD for Terraform Prod Env"
   default = "Z272VSMY1S2MLD"
-
 }
 
 variable "record_set_name" {
@@ -108,45 +107,35 @@ variable "record_type" {
  
 }
 
+variable "sg_from_port" {
+  description = "Provide the starting ingress port for the default security group"
+  default = "9000"
+ 
+}
+
+variable "sg_to_port" {
+  description = "Provide the ending ingress port for the default security group"
+  default = "9000"
+ 
+}
+
 variable "nlb_listener_port" {
-  description = "Provide the the TCP port for the NLB listener"
+  description = "Provide the TCP port for the NLB listener"
   default = "9000"
  
 }
 
 variable "db_computer_name" {
   description = <<DESCRIPTION
-  Provide the name minus the number of the Database or App/DB computer that will be used in Active Directory i.e. SHO-AVATRDBVP
+  Provide the name of the Database or App/DB computer minus the number that will be used in Active Directory i.e. SHO-AVATRAPDP 
   This is found in the Customer Build Doc
   DESCRIPTION
 }
 
 variable "app_computer_name" {
   description = <<DESCRIPTION
-  Provide the name minus the number of the App computer that will be used in Active Directory i.e. SHO-AVATRAPVP
+  Provide the name of the App computer minus the number that will be used in Active Directory i.e. SHO-AVATRAPVP
   This is found in the Customer Build Doc
-  DESCRIPTION
-}
-
-variable "appdblb" {
-  description = <<DESCRIPTION
-  Number of AppDB Load Balancers to be provisioned.
-  In a single server deployment you will enter a 1 here.
-  If a multiple server deployments enter 0.
-  Choices:
-      1
-      0
-  DESCRIPTION
-}
-
-variable "applb" {
-  description = <<DESCRIPTION
-  Number of App Load Balancers to be provisioned.
-  In a single server deployment you will enter a 0 here.
-  If a multiple server deployments enter 1.
-  Choices:
-      1
-      0
   DESCRIPTION
 }
 
@@ -223,7 +212,7 @@ variable "avail_zone" {
   type = "map"
   default = {
     "us-east-1" = ["us-east-1b", "us-east-1c", "us-east-1a", "us-east-1d"]
-    "us-west-2" = ["us-west-2b", "us-west-2c", "us-west-2a"]
+    "us-west-2" = ["us-west-2b", "us-west-2a", "us-west-2c"]
   }
 }
 
